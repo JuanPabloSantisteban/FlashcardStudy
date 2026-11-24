@@ -1,8 +1,19 @@
 {
+  "repo": "JuanPabloSantisteban/FlashcardStudy",
+  "branch": "main",
   "categories": [
-    { "name": "School", "description": "Economics masters courses" },
-    { "name": "IB preparation", "description": "" },
-    { "name": "General Concepts", "description": "" }
+    {
+      "name": "School",
+      "description": "Economics masters courses"
+    },
+    {
+      "name": "IB preparation",
+      "description": ""
+    },
+    {
+      "name": "General Concepts",
+      "description": ""
+    }
   ],
   "decks": [
     "school/sample-macroeconomics.md",

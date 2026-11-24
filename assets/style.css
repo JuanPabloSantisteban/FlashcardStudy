@@ -207,3 +207,17 @@ nav { display: flex; align-items: center; gap: 6px; }
 .sync-status.error { color: var(--red); background: var(--red-soft); }
 .input { width: 100%; font: inherit; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); min-height: 48px; }
 .input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Add card */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; gap: 0; } }
+label.field { display: block; }
+label.field .field-label { display: block; }
+.opt { text-transform: none; letter-spacing: 0; font-weight: 400; }
+textarea.input { resize: vertical; line-height: 1.45; font-size: 16px; }
+.input { font-size: 16px; }
+.preview { border: 1px dashed var(--border); border-radius: 12px; padding: 14px; background: var(--bg); }
+.preview .card-front { font-size: 18px; text-align: left; margin-bottom: 8px; }
+.preview .card-back { font-size: 16px; }
+.add-link { color: var(--accent); }
+.form-grid .field:last-child { margin-bottom: 16px; }

@@ -8,13 +8,17 @@ Math is written in LaTeX and rendered with KaTeX.
 - No build step and no server: it runs on GitHub Pages as is.
 - Green/red marks are saved in the browser and, once sync is on, in a private Gist on your GitHub account so phone and computer stay in step.
 
-## Turn on sync (once per device)
+## Add cards in the app
 
-1. Create a classic token at https://github.com/settings/tokens/new?scopes=gist with only the **gist** box ticked. Pick a long expiration or none.
+Tap **+ Add**, pick the category, type course, topic, front and back (math preview included) and save. The card is committed to this repository, so it reaches every device after GitHub Pages republishes (about a minute; it shows on the device you used straight away).
+
+## Turn on sync and card saving (once per device)
+
+1. Create a classic token at https://github.com/settings/tokens/new?scopes=gist,public_repo with only **gist** and **public_repo** ticked. Pick a long expiration or none.
 2. In the app open **Progress → Sync between devices**, paste the token and press **Turn on sync**.
 3. Do the same on your other device with the same token.
 
-The token is stored only in that browser. It can read and write your gists, nothing else. If it expires, the top bar shows "Sync error"; make a new token and paste it again.
+The token is stored only in that browser. It can write to your gists and public repositories. If it expires, the top bar shows "Sync error"; make a new token and paste it again.
 For each card the most recent mark wins, so you can review on either device. Export / Import on the Progress page still works as a manual backup.
 
 ## Run locally

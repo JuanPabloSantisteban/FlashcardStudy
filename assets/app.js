@@ -143,8 +143,8 @@
   // Re-draw the current screen after remote marks arrive, but never in the middle of a card.
   function rerenderIfIdle() {
     var h = location.hash || '#/';
-    if (h === '#/review') return;
-    if (h === '#/progress') return viewProgress();
+    if (h === '#/review' || h.indexOf('#/add') === 0) return;
+    if (h === '#/progress') { viewProgress(); return; }
     route(true);
   }
 
@@ -165,7 +165,7 @@
   }
   function toast(msg) {
     var t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200);
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, msg.length > 40 ? 5000 : 2200);
   }
 
   // ---------- rich text: Markdown + LaTeX ----------
@@ -247,6 +247,8 @@
         front: f,
         back: b,
         deck: meta.deck || meta.title || path.replace(/^.*\//, '').replace(/\.\w+$/, ''),
+        fileCategory: category || '',
+        fileCourse: meta.course || '',
         file: path
       });
     });
@@ -281,6 +283,7 @@
         state.byId[c.id] = c;
         state.cards.push(c);
       });
+      Editor.mergePending();
       showWarnings();
     });
   }
@@ -362,7 +365,7 @@
       (all.length ? all.length + (all.length === 1 ? ' card' : ' cards') : 'No cards yet') + (cat.description ? ' · ' + esc(cat.description) : '') + '</p>';
 
     if (!all.length) {
-      html += '<div class="panel empty">No cards in this category yet. Add a deck file under <code>cards/</code> (see the card guide).</div>';
+      html += '<div class="panel empty">No cards in this category yet.<br><br><a class="btn primary" href="#/add?cat=' + encodeURIComponent(cat.name) + '">+ Add the first card</a></div>';
       app.innerHTML = html; return;
     }
 
@@ -392,8 +395,10 @@
       (chosen.length ? 'Review ' + chosen.length + (chosen.length === 1 ? ' card' : ' cards') : 'No cards match') + '</button></div>';
     html += '</div>';
 
-    html += '<div class="list-head"><h2>Cards in this selection</h2>' +
-      (chosen.length ? '<button class="btn small" id="reset-sel">Clear marks</button>' : '') + '</div>';
+    html += '<div class="list-head"><h2>Cards in this selection</h2><div style="display:flex;gap:8px">' +
+      '<a class="btn small" href="#/add?cat=' + encodeURIComponent(cat.name) + (p.course ? '&course=' + encodeURIComponent(p.course) : '') +
+      (p.topics.length === 1 ? '&topic=' + encodeURIComponent(p.topics[0]) : '') + '">+ Add card</a>' +
+      (chosen.length ? '<button class="btn small" id="reset-sel">Clear marks</button>' : '') + '</div></div>';
     if (!chosen.length) html += '<div class="panel empty">Nothing here with these filters.</div>';
     else {
       html += '<ul class="list">' + chosen.map(function (c) {
@@ -574,8 +579,8 @@
         (Sync.status === 'error' ? '<p class="note" style="margin:0;color:var(--red)">' + esc(Sync.error) + '</p>' : '') +
         '<button class="btn" id="sync-now">Sync now</button><button class="btn small" id="sync-off">Turn off sync on this device</button></div>';
     }
-    return '<div class="panel stack"><p class="note" style="margin:0">Paste a GitHub token with the <strong>gist</strong> permission to sync your marks through a private Gist. Do this once on each device, using the same token. ' +
-      '<a href="https://github.com/settings/tokens/new?scopes=gist&description=Flashcards%20sync" target="_blank" rel="noopener">Create a token</a> (choose "No expiration" or a long one, and only tick <em>gist</em>).</p>' +
+    return '<div class="panel stack"><p class="note" style="margin:0">Paste a GitHub token with <strong>gist</strong> and <strong>public_repo</strong> ticked. It syncs your marks through a private Gist and lets you add cards from the app. Do this once on each device, using the same token. ' +
+      '<a href="https://github.com/settings/tokens/new?scopes=gist,public_repo&description=Flashcards" target="_blank" rel="noopener">Create a token</a> (choose "No expiration", and tick only <em>gist</em> and <em>public_repo</em>).</p>' +
       '<input class="input" id="sync-token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
       '<button class="btn primary" id="sync-on">Turn on sync</button></div>';
   }
@@ -596,12 +601,214 @@
     if (off) off.onclick = function () { Sync.disconnect(); toast('Sync turned off on this device'); viewProgress(); };
   }
 
+  // ---------- adding cards from the app ----------
+  // New cards are committed to the repository in the same text format Claude uses, so every device gets them.
+  // Until GitHub Pages republishes (about a minute) they are kept locally as "pending" so they show at once.
+  var PENDING_KEY = 'flashcards.pending.v1';
+  var Editor = {
+    pending: (function () { var p = loadJSON(PENDING_KEY, []); return Array.isArray(p) ? p : []; })(),
+    savePending: function () { saveJSON(PENDING_KEY, this.pending); },
+    mergePending: function () {
+      var dayAgo = Date.now() - 864e5;
+      this.pending = this.pending.filter(function (p) { return p && p.card && !state.byId[p.card.id] && p.t > dayAgo; });
+      this.savePending();
+      this.pending.forEach(function (p) { state.byId[p.card.id] = p.card; state.cards.push(p.card); });
+    },
+    repo: function () {
+      if (state.config && state.config.repo) return state.config.repo;
+      var host = location.hostname.match(/^([^.]+)\.github\.io$/i), seg = location.pathname.split('/').filter(Boolean)[0];
+      return host && seg ? host[1] + '/' + seg : '';
+    },
+    branch: function () { return (state.config && state.config.branch) || 'main'; },
+    folderFor: function (catName) {
+      var cat = categories().filter(function (c) { return c.name === catName; })[0];
+      return (cat && cat.folder) || slug(catName);
+    },
+    // Use an existing deck file with the same category and course, otherwise a new file.
+    fileFor: function (catName, course) {
+      var match = state.cards.filter(function (c) { return c.fileCategory === catName && (c.fileCourse || '') === (course || ''); })[0];
+      if (match) return match.file;
+      return this.folderFor(catName) + '/' + (slug(course) || 'my-cards') + '.md';
+    },
+    makeId: function (catName, course, front) {
+      var prefix = slug(course || catName).split('-').slice(0, 2).join('-') || 'card';
+      var words = slug(front.replace(/\$[^$]*\$/g, ' ')).split('-').filter(Boolean).slice(0, 6).join('-') || 'card';
+      var base = prefix + '-' + words, id = base, n = 2;
+      while (state.byId[id]) id = base + '-' + n++;
+      return id;
+    },
+    // Keep typed text from being read as card syntax.
+    clean: function (text) {
+      return String(text).replace(/\r\n?/g, '\n').trim().split('\n').map(function (l) {
+        return (/^={3,}\s*$/.test(l) || /^(back|front|id|topic|course)\s*:/i.test(l)) ? ' ' + l : l;
+      }).join('\n');
+    },
+    serialize: function (card, includeCourse) {
+      return 'id: ' + card.id + '\n' +
+        (card.topic ? 'topic: ' + card.topic.replace(/\n/g, ' ') + '\n' : '') +
+        (includeCourse && card.course ? 'course: ' + card.course + '\n' : '') +
+        'front: ' + this.clean(card.front) + '\nback: ' + this.clean(card.back) + '\n';
+    },
+    b64: function (str) { return btoa(unescape(encodeURIComponent(str))); },
+    unb64: function (b) { return decodeURIComponent(escape(atob(b.replace(/\s/g, '')))); },
+    gh: function (path, opts) {
+      opts = opts || {};
+      return fetch('https://api.github.com' + path, {
+        method: opts.method || 'GET', cache: 'no-store',
+        headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + Sync.cfg.token, 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      }).then(function (r) {
+        if (opts.allow404 && r.status === 404) return null;
+        if (r.status === 401) throw new Error('GitHub rejected the token. It may have expired.');
+        if (r.status === 403 || r.status === 404) throw new Error('This token can\'t save cards. Make a new token with both "gist" and "public_repo" ticked, then paste it on the Progress page.');
+        if (r.status === 409 || r.status === 422) { var e = new Error('conflict'); e.conflict = true; throw e; }
+        if (!r.ok) throw new Error('GitHub answered ' + r.status + '.');
+        return r.json();
+      });
+    },
+    contentsPath: function (repo, path) { return '/repos/' + repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/'); },
+    readFile: function (repo, path) {
+      var self = this;
+      return self.gh(self.contentsPath(repo, path) + '?ref=' + self.branch(), { allow404: true })
+        .then(function (f) { return f ? { sha: f.sha, text: self.unb64(f.content) } : null; });
+    },
+    writeFile: function (repo, path, text, sha, message) {
+      var body = { message: message, content: this.b64(text), branch: this.branch() };
+      if (sha) body.sha = sha;
+      return this.gh(this.contentsPath(repo, path), { method: 'PUT', body: body });
+    },
+    retry: function (fn, tries) {
+      return fn().catch(function (e) { if (e.conflict && tries > 0) return Editor.retry(fn, tries - 1); throw e; });
+    },
+    save: function (card) {
+      var self = this, repo = self.repo();
+      if (!repo) return Promise.reject(new Error('Repository unknown. Add "repo": "owner/name" to cards/index.json.'));
+      var path = self.fileFor(card.category, card.course), full = 'cards/' + path, created = false;
+      return self.retry(function () {
+        return self.readFile(repo, full).then(function (f) {
+          var text;
+          if (f) {
+            var fm = f.text.replace(/\r\n?/g, '\n').match(/^---[ \t]*\n([\s\S]*?)\n---/);
+            var fileCourse = fm ? (parseKV(fm[1]).course || '') : '';
+            text = f.text.replace(/\s*$/, '') + '\n\n===\n\n' + self.serialize(card, fileCourse !== (card.course || ''));
+          } else {
+            text = '---\ncategory: ' + card.category + '\n' + (card.course ? 'course: ' + card.course + '\n' : '') + '---\n\n' + self.serialize(card, false);
+          }
+          created = !f;
+          return self.writeFile(repo, full, text, f && f.sha, 'Add card: ' + card.front.split('\n')[0].slice(0, 60));
+        });
+      }, 2).then(function () {
+        if (!created) return;
+        // A new deck file must be listed in cards/index.json.
+        return self.retry(function () {
+          return self.readFile(repo, 'cards/index.json').then(function (f) {
+            var cfg = JSON.parse(f.text);
+            cfg.decks = cfg.decks || [];
+            if (cfg.decks.indexOf(path) !== -1) return;
+            cfg.decks.push(path);
+            return self.writeFile(repo, 'cards/index.json', JSON.stringify(cfg, null, 2) + '\n', f.sha, 'List new deck ' + path);
+          });
+        }, 2).then(function () {
+          if (state.config.decks.indexOf(path) === -1) state.config.decks.push(path);
+        });
+      }).then(function () {
+        card.file = path; card.fileCategory = card.category; card.fileCourse = card.course;
+        card.deck = path.replace(/^.*\//, '').replace(/\.\w+$/, '');
+        self.pending.push({ card: card, t: Date.now() }); self.savePending();
+        state.byId[card.id] = card; state.cards.push(card);
+        return path;
+      });
+    }
+  };
+
+  function viewAdd(params) {
+    var cats = categories();
+    var last = state.prefs.__add || {};
+    var catName = params.cat || last.cat || (cats[0] && cats[0].name) || '';
+    var course = params.course != null ? params.course : (catName === last.cat ? last.course || '' : '');
+    var topic = params.topic != null ? params.topic : (catName === last.cat && course === (last.course || '') ? last.topic || '' : '');
+    var hasToken = !!Sync.cfg.token;
+    function opts(list) { return list.map(function (x) { return '<option value="' + esc(x) + '">'; }).join(''); }
+    var allCourses = uniq(state.cards.map(function (c) { return c.course; })).sort();
+    var allTopics = uniq(state.cards.map(function (c) { return c.topic; })).sort();
+    function courseLabel() { return 'Course' + (catName === 'School' ? '' : ' <span class="opt">(optional)</span>'); }
+
+    app.innerHTML = '<a class="back" href="#/">← All categories</a><h1>Add a card</h1>' +
+      '<p class="sub">It is saved to your repository, so it shows on all your devices. Math: <code>$x^2$</code> inline, <code>$$...$$</code> on its own line.</p>' +
+      (hasToken ? '' : '<div class="panel stack" style="margin-bottom:16px"><p class="note" style="margin:0"><strong>One-time setup on this device.</strong> Saving cards needs a GitHub token with <strong>gist</strong> and <strong>public_repo</strong> ticked. ' +
+        '<a href="https://github.com/settings/tokens/new?scopes=gist,public_repo&description=Flashcards" target="_blank" rel="noopener">Create a token</a> and paste it here. This also turns on red/green sync.</p>' +
+        '<input class="input" id="add-token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…"></div>') +
+      '<form class="panel" id="add-form" autocomplete="off">' +
+      '<div class="field"><div class="field-label">Category</div><div class="chips">' +
+      cats.map(function (c) { return '<button type="button" class="chip" data-cat="' + esc(c.name) + '" aria-pressed="' + (c.name === catName) + '">' + esc(c.name) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="form-grid">' +
+      '<label class="field"><span class="field-label" id="course-label">' + courseLabel() + '</span><input class="input" id="f-course" list="dl-course" value="' + esc(course) + '" placeholder="e.g. Macroeconomics"></label>' +
+      '<label class="field"><span class="field-label">Topic <span class="opt">(optional)</span></span><input class="input" id="f-topic" list="dl-topic" value="' + esc(topic) + '" placeholder="e.g. Growth"></label>' +
+      '</div><datalist id="dl-course">' + opts(allCourses) + '</datalist><datalist id="dl-topic">' + opts(allTopics) + '</datalist>' +
+      '<label class="field"><span class="field-label">Front</span><textarea class="input" id="f-front" rows="2" placeholder="Term or short question"></textarea></label>' +
+      '<label class="field"><span class="field-label">Back</span><textarea class="input" id="f-back" rows="5" placeholder="Explanation. You can use **bold**, lists and $math$."></textarea></label>' +
+      '<div class="field"><div class="field-label">Preview</div><div class="preview"><div class="card-front rich" id="p-front"><span class="muted">Front</span></div><div class="card-back rich" id="p-back"></div></div></div>' +
+      '<div class="start-row"><button class="btn primary" id="f-save" type="submit">Save card</button></div>' +
+      '</form>';
+
+    var form = document.getElementById('add-form');
+    var fFront = document.getElementById('f-front'), fBack = document.getElementById('f-back');
+    var fCourse = document.getElementById('f-course'), fTopic = document.getElementById('f-topic');
+    form.querySelectorAll('[data-cat]').forEach(function (b) {
+      b.onclick = function () {
+        catName = b.getAttribute('data-cat');
+        form.querySelectorAll('[data-cat]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        document.getElementById('course-label').innerHTML = courseLabel();
+      };
+    });
+    var timer;
+    function preview() {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        document.getElementById('p-front').innerHTML = fFront.value.trim() ? renderRich(fFront.value) : '<span class="muted">Front</span>';
+        document.getElementById('p-back').innerHTML = renderRich(fBack.value);
+      }, 120);
+    }
+    fFront.oninput = preview; fBack.oninput = preview;
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      var btn = document.getElementById('f-save');
+      var front = fFront.value.trim(), back = fBack.value.trim();
+      if (!front || !back) { toast('Fill in both the front and the back'); return; }
+      if (catName === 'School' && !fCourse.value.trim()) { toast('Add a course for School cards'); fCourse.focus(); return; }
+      var ready = Promise.resolve();
+      if (!Sync.cfg.token) {
+        var tokEl = document.getElementById('add-token'), tok = tokEl && tokEl.value.trim();
+        if (!tok) { toast('Paste your GitHub token first'); return; }
+        ready = Sync.connect(tok);
+      }
+      btn.disabled = true; btn.textContent = 'Saving…';
+      var c = fCourse.value.trim(), tp = fTopic.value.trim();
+      ready.then(function () {
+        return Editor.save({ id: Editor.makeId(catName, c, front), category: catName, course: c, topic: tp, front: front, back: back });
+      }).then(function (path) {
+        state.prefs.__add = { cat: catName, course: c, topic: tp }; saveJSON(PREFS_KEY, state.prefs);
+        toast('Card saved');
+        viewAdd({ cat: catName, course: c, topic: tp });
+        document.getElementById('f-front').focus();
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Save card';
+        toast(err.message || 'Could not save the card');
+      });
+    };
+  }
+
   // ---------- routing & keys ----------
   function route(keepScroll) {
     var h = location.hash || '#/';
     if (keepScroll !== true) window.scrollTo(0, 0);
     if (h === '#/review') return viewReview();
     if (h === '#/progress') return viewProgress();
+    if (h.indexOf('#/add') === 0) {
+      var q = {};
+      (h.split('?')[1] || '').split('&').forEach(function (kv) { if (kv) { var a = kv.split('='); q[decodeURIComponent(a[0])] = decodeURIComponent(a[1] || ''); } });
+      return viewAdd(q);
+    }
     var m = h.match(/^#\/c\/([^/?]+)/);
     if (m) { var cat = categoryBySlug(m[1]); if (cat) return viewCategory(cat); }
     state.session = null;

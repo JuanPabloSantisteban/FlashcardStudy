@@ -13,6 +13,13 @@ repository (or Claude Code commits them directly).
   The user flips the card and marks it green (knew it) or red (didn't). There is no spaced repetition.
 - About 85% of the content is from an economics master's degree, so most cards go in `School`.
 
+## Cards added from the app
+
+The user can also add cards in the web app (the "+ Add" screen). The app appends them to the matching
+deck file in the same format (or creates `cards/<category-folder>/<course-slug>.md` and lists it in
+`cards/index.json`). Treat those cards like any other: keep their ids, and check them for duplicates
+before adding new ones. `cards/index.json` also holds `"repo"` and `"branch"`, which the app needs; leave them as they are.
+
 ## Where files go
 
 ```
