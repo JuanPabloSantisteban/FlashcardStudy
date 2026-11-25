@@ -15,10 +15,5 @@
       "description": ""
     }
   ],
-  "decks": [
-    "school/sample-macroeconomics.md",
-    "school/sample-econometrics.md",
-    "ib-preparation/sample.md",
-    "general-concepts/sample.md"
-  ]
+  "decks": []
 }
