@@ -15,5 +15,7 @@
       "description": ""
     }
   ],
-  "decks": []
+  "decks": [
+    "school/econometrics.md"
+  ]
 }
