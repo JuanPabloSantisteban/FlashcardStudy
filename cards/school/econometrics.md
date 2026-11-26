@@ -57,3 +57,11 @@ id: metrics-variance-proof
 topic: Moments
 front: In econometrics, prove that $E\{[X - E(X)]^2\} = E(X^2) - [E(X)]^2$.
 back: $$\begin{aligned} Var(X) &= E\{[X - E(X)]^2\} \\ &= E[X^2 - 2X\,E(X) + E(X)^2] \\ &= E(X^2) - 2E(X)^2 + E(X)^2 \\ &= E(X^2) - [E(X)]^2 \end{aligned}$$
+
+===
+
+id: metrics-variance-notation
+topic: Moments
+front: In econometrics, what is the shorthand notation for the variance of $X$?
+back: $$Var(X) \equiv \sigma_x^2$$
+**Add-on:** the standard deviation is $\sigma_x \equiv \sqrt{Var(X)}$.
