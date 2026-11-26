@@ -65,3 +65,10 @@ topic: Moments
 front: In econometrics, what is the shorthand notation for the variance of $X$?
 back: $$Var(X) \equiv \sigma_x^2$$
 **Add-on:** the standard deviation is $\sigma_x \equiv \sqrt{Var(X)}$.
+
+===
+
+id: metrics-variance-linear-transformation
+topic: Moments
+front: Confirm that $Var(aX + b) = a^2\,Var(X)$. *Hint: use the definition of variance.*
+back: $$\begin{aligned} Var(aX+b) &= E[(aX+b)^2] - [E(aX+b)]^2 \\ &= E[a^2X^2 + 2abX + b^2] - E(aX+b)\,E(aX+b) \\ &= a^2E(X^2) + 2abE(X) + b^2 - [a^2E(X)^2 + 2abE(X) + b^2] \\ &= a^2E(X^2) + 2abE(X) + b^2 - a^2E(X)^2 - 2abE(X) - b^2 \\ &= a^2E(X^2) - a^2E(X)^2 \\ &= a^2[E(X^2) - E(X)^2] = a^2\,Var(X) \end{aligned}$$
