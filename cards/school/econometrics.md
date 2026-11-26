@@ -33,3 +33,12 @@ id: metrics-expected-value-population-mean
 topic: Moments
 front: In econometrics, what is another name for the expected value $E[X] = \sum_{i=1}^{k} x_i\,p_i$?
 back: The **population mean**: $\mu = \sum_{i=1}^{k} x_i\,p_i = E[X]$. It is the probability-weighted average of the realizations $x_i$.
+
+===
+
+id: metrics-expected-value-definitions
+topic: Moments
+front: In econometrics, how is the expected value $E(X)$ defined for a discrete random variable, and for a continuous one?
+back:
+- **Discrete:** $E(X) \equiv \sum_{i=1}^{k} p_i\,x_i$. Each realization weighted by its probability, then summed.
+- **Continuous:** $E(X) \equiv \int_{-\infty}^{+\infty} x\,f(x)\,dx$. The same idea, with the pdf $f(x)$ as the weights and an integral in place of the sum.
