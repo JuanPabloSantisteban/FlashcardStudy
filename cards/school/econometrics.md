@@ -82,3 +82,19 @@ back:
 - (i) $f(x, y) \geq 0$ for all $x, y$. The joint density is never negative.
 - (ii) $\int_{-\infty}^{+\infty}\int_{-\infty}^{+\infty} f(x, y)\,dx\,dy = 1$. The total probability over both domains is 1.
 - (iii) $\int_c^d\int_a^b f(x,y)\,dx\,dy = \text{Prob}[a < X < b,\ c < Y < d]$. The volume under $f(x,y)$ over a region is the probability that $(X, Y)$ falls in that region.
+
+===
+
+id: metrics-marginal-distribution
+topic: Joint distributions
+front: In econometrics, what is the notation for the marginal distribution of $X$?
+back: $$f(x) \equiv \int_{-\infty}^{+\infty} f(x, y)\,dy$$
+It integrates (averages) the joint pdf over $y$, so $f(x)$ no longer depends on $y$.
+
+===
+
+id: metrics-conditional-distribution
+topic: Joint distributions
+front: In econometrics, what is the definition of the conditional distribution of $Y$ given $X$?
+back: $$f(y \mid x) \equiv \frac{f(x, y)}{f(x)}$$
+The joint pdf divided by the marginal pdf of $X$.
