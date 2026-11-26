@@ -72,3 +72,13 @@ id: metrics-variance-linear-transformation
 topic: Moments
 front: Confirm that $Var(aX + b) = a^2\,Var(X)$. *Hint: use the definition of variance.*
 back: $$\begin{aligned} Var(aX+b) &= E[(aX+b)^2] - [E(aX+b)]^2 \\ &= E[a^2X^2 + 2abX + b^2] - E(aX+b)\,E(aX+b) \\ &= a^2E(X^2) + 2abE(X) + b^2 - [a^2E(X)^2 + 2abE(X) + b^2] \\ &= a^2E(X^2) + 2abE(X) + b^2 - a^2E(X)^2 - 2abE(X) - b^2 \\ &= a^2E(X^2) - a^2E(X)^2 \\ &= a^2[E(X^2) - E(X)^2] = a^2\,Var(X) \end{aligned}$$
+
+===
+
+id: metrics-joint-pdf-properties
+topic: Joint distributions
+front: In econometrics, what are the properties of a joint pdf $f(x, y)$?
+back:
+- (i) $f(x, y) \geq 0$ for all $x, y$. The joint density is never negative.
+- (ii) $\int_{-\infty}^{+\infty}\int_{-\infty}^{+\infty} f(x, y)\,dx\,dy = 1$. The total probability over both domains is 1.
+- (iii) $\int_c^d\int_a^b f(x,y)\,dx\,dy = \text{Prob}[a < X < b,\ c < Y < d]$. The volume under $f(x,y)$ over a region is the probability that $(X, Y)$ falls in that region.
