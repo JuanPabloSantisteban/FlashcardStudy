@@ -50,3 +50,10 @@ topic: Moments
 front: In econometrics, what is the formal definition of the (population) variance of a random variable $X$?
 back: $$Var(X) \equiv E\{[X - E(X)]^2\} = E(X^2) - [E(X)]^2$$
 It is the expected squared deviation of $X$ from its mean, the usual measure of spread.
+
+===
+
+id: metrics-variance-proof
+topic: Moments
+front: In econometrics, prove that $E\{[X - E(X)]^2\} = E(X^2) - [E(X)]^2$.
+back: $$\begin{aligned} Var(X) &= E\{[X - E(X)]^2\} \\ &= E[X^2 - 2X\,E(X) + E(X)^2] \\ &= E(X^2) - 2E(X)^2 + E(X)^2 \\ &= E(X^2) - [E(X)]^2 \end{aligned}$$
