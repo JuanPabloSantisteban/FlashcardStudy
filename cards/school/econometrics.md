@@ -42,3 +42,11 @@ front: In econometrics, how is the expected value $E(X)$ defined for a discrete 
 back:
 - **Discrete:** $E(X) \equiv \sum_{i=1}^{k} p_i\,x_i$. Each realization weighted by its probability, then summed.
 - **Continuous:** $E(X) \equiv \int_{-\infty}^{+\infty} x\,f(x)\,dx$. The same idea, with the pdf $f(x)$ as the weights and an integral in place of the sum.
+
+===
+
+id: metrics-variance-definition
+topic: Moments
+front: In econometrics, what is the formal definition of the (population) variance of a random variable $X$?
+back: $$Var(X) \equiv E\{[X - E(X)]^2\} = E(X^2) - [E(X)]^2$$
+It is the expected squared deviation of $X$ from its mean, the usual measure of spread.
