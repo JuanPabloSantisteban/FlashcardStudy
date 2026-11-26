@@ -26,3 +26,10 @@ back:
 - (i) $f(x) \geq 0$ for all $x$. The density is never negative.
 - (ii) $\int_{-\infty}^{+\infty} f(x)\,dx = 1$. The total probability over all possible values is 1.
 - (iii) $\int_a^b f(x)\,dx = \text{Prob}[a < X < b]$. The area under $f(x)$ between $a$ and $b$ is the probability that $X$ falls in that interval.
+
+===
+
+id: metrics-expected-value-population-mean
+topic: Moments
+front: In econometrics, what is another name for the expected value $E[X] = \sum_{i=1}^{k} x_i\,p_i$?
+back: The **population mean**: $\mu = \sum_{i=1}^{k} x_i\,p_i = E[X]$. It is the probability-weighted average of the realizations $x_i$.
