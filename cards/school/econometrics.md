@@ -16,3 +16,13 @@ id: metrics-probability-of-realization
 topic: Probability
 front: In econometrics, what does $p_i \equiv \text{Prob}(X = x_i)$ mean?
 back: $p_i$ is the **probability that the random variable $X$ takes the particular realization $x_i$**, one of its $k$ possible values $\{x_1, \dots, x_k\}$.
+
+===
+
+id: metrics-pdf-properties
+topic: Probability
+front: In econometrics, what are the properties of a probability density function (pdf) $f(x)$?
+back:
+- (i) $f(x) \geq 0$ for all $x$. The density is never negative.
+- (ii) $\int_{-\infty}^{+\infty} f(x)\,dx = 1$. The total probability over all possible values is 1.
+- (iii) $\int_a^b f(x)\,dx = \text{Prob}[a < X < b]$. The area under $f(x)$ between $a$ and $b$ is the probability that $X$ falls in that interval.
