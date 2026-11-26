@@ -221,3 +221,15 @@ textarea.input { resize: vertical; line-height: 1.45; font-size: 16px; }
 .preview .card-back { font-size: 16px; }
 .add-link { color: var(--accent); }
 .form-grid .field:last-child { margin-bottom: 16px; }
+
+/* Images */
+.rich img { display: block; max-width: 100%; height: auto; margin: .5em auto; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: zoom-in; }
+.row-front img { max-height: 80px; margin: 4px 0; }
+.img-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: -6px; }
+.img-row .note { font-size: 13px; }
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; border-radius: 6px; cursor: zoom-in; }
+.lightbox.zoomed { align-items: flex-start; justify-content: flex-start; }
+.lightbox.zoomed img { max-width: none; max-height: none; width: 200%; cursor: zoom-out; }
+.lightbox-close { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.15); color: #fff; font-size: 20px; cursor: pointer; }
+@media (min-width: 900px) { .lightbox.zoomed img { width: auto; } }

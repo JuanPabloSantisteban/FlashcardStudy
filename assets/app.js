@@ -184,7 +184,51 @@
     var html = window.marked ? window.marked.parse(text, { breaks: true, gfm: true }) : '<p>' + esc(text).replace(/\n/g, '<br>') + '</p>';
     html = html.replace(/<p>\s*MATHBLOCK(\d+)X\s*<\/p>/g, function (_, i) { return renderMath(math[+i]); });
     html = html.replace(/MATH(?:BLOCK|INLINE)(\d+)X/g, function (_, i) { return renderMath(math[+i]); });
+    html = html.replace(/<img src="([^"]*)"/g, function (_, src) {
+      var local = localImages[src.replace(/&amp;/g, '&')];
+      return '<img loading="lazy" class="zoomable" src="' + (local || src) + '"';
+    });
     return html;
+  }
+
+  // ---------- images ----------
+  // Images live in /images in the repo and are referenced from card text as ![description](images/file.jpg).
+  // Images picked in this session are previewed from memory until GitHub Pages has published them.
+  var localImages = {}, uploadedImages = {};
+  function openLightbox(src) {
+    var box = document.createElement('div');
+    box.className = 'lightbox';
+    box.innerHTML = '<img src="' + esc(src) + '" alt=""><button class="lightbox-close" aria-label="Close">✕</button>';
+    box.onclick = function (e) { if (e.target.tagName !== 'IMG' || box.classList.contains('zoomed')) box.remove(); else box.classList.add('zoomed'); };
+    document.body.appendChild(box);
+  }
+  document.addEventListener('click', function (e) {
+    var img = e.target.closest && e.target.closest('img.zoomable');
+    if (!img || img.closest('.lightbox')) return;
+    e.preventDefault(); e.stopPropagation();
+    openLightbox(img.getAttribute('src'));
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    var lb = document.querySelector('.lightbox');
+    if (lb && e.key === 'Escape') lb.remove();
+  });
+  // Shrink a photo so it loads fast on a phone but stays readable (long side at most 1800px).
+  function compressImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var max = 1800, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('That image format could not be read. Try a JPG or PNG.')); };
+      img.src = url;
+    });
   }
   function renderMath(m) {
     if (!m) return '';
@@ -680,6 +724,17 @@
     retry: function (fn, tries) {
       return fn().catch(function (e) { if (e.conflict && tries > 0) return Editor.retry(fn, tries - 1); throw e; });
     },
+    uploadImages: function (card) {
+      var self = this, repo = self.repo(), text = card.front + '\n' + card.back;
+      var paths = Object.keys(localImages).filter(function (p) { return !uploadedImages[p] && text.indexOf('(' + p + ')') !== -1; });
+      return paths.reduce(function (chain, p) {
+        return chain.then(function () {
+          var data = localImages[p].split(',')[1];
+          return self.gh(self.contentsPath(repo, p), { method: 'PUT', body: { message: 'Add image ' + p, content: data, branch: self.branch() } })
+            .then(function () { uploadedImages[p] = true; });
+        });
+      }, Promise.resolve());
+    },
     save: function (card) {
       var self = this, repo = self.repo();
       if (!repo) return Promise.reject(new Error('Repository unknown. Add "repo": "owner/name" to cards/index.json.'));
@@ -747,6 +802,8 @@
       '</div><datalist id="dl-course">' + opts(allCourses) + '</datalist><datalist id="dl-topic">' + opts(allTopics) + '</datalist>' +
       '<label class="field"><span class="field-label">Front</span><textarea class="input" id="f-front" rows="2" placeholder="Term or short question"></textarea></label>' +
       '<label class="field"><span class="field-label">Back</span><textarea class="input" id="f-back" rows="5" placeholder="Explanation. You can use **bold**, lists and $math$."></textarea></label>' +
+      '<div class="field img-row"><label class="btn small file-label">🖼 Add image<input type="file" id="f-image" accept="image/*"></label>' +
+      '<span class="note">Photo, screenshot or scan. On a computer you can also paste an image into the text box.</span></div>' +
       '<div class="field"><div class="field-label">Preview</div><div class="preview"><div class="card-front rich" id="p-front"><span class="muted">Front</span></div><div class="card-back rich" id="p-back"></div></div></div>' +
       '<div class="start-row"><button class="btn primary" id="f-save" type="submit">Save card</button></div>' +
       '</form>';
@@ -770,6 +827,33 @@
       }, 120);
     }
     fFront.oninput = preview; fBack.oninput = preview;
+    var lastBox = fBack;
+    fFront.onfocus = function () { lastBox = fFront; }; fBack.onfocus = function () { lastBox = fBack; };
+    function addImage(file) {
+      if (!file || !/^image\//.test(file.type || 'image/')) return;
+      toast('Adding image…');
+      compressImage(file).then(function (dataUrl) {
+        var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+        var base = slug(fFront.value).split('-').slice(0, 5).join('-') || 'card';
+        var path = 'images/' + base + '-' + stamp + '-' + Math.random().toString(36).slice(2, 7) + '.jpg';
+        localImages[path] = dataUrl;
+        var box = lastBox, md = '![' + (fFront.value.trim().split('\n')[0].replace(/[\[\]]/g, '').slice(0, 60) || 'image') + '](' + path + ')';
+        var pos = box.selectionEnd != null ? box.selectionEnd : box.value.length;
+        var before = box.value.slice(0, pos), after = box.value.slice(pos);
+        var insert = (before && !/\n$/.test(before) ? '\n' : '') + md + (after && !/^\n/.test(after) ? '\n' : '');
+        box.value = before + insert + after;
+        preview();
+      }).catch(function (err) { toast(err.message); });
+    }
+    document.getElementById('f-image').onchange = function (e) { addImage(e.target.files[0]); e.target.value = ''; };
+    [fFront, fBack].forEach(function (box) {
+      box.addEventListener('paste', function (e) {
+        var items = (e.clipboardData && e.clipboardData.items) || [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].kind === 'file' && /^image\//.test(items[i].type)) { e.preventDefault(); lastBox = box; addImage(items[i].getAsFile()); return; }
+        }
+      });
+    });
     form.onsubmit = function (e) {
       e.preventDefault();
       var btn = document.getElementById('f-save');
@@ -785,7 +869,8 @@
       btn.disabled = true; btn.textContent = 'Saving…';
       var c = fCourse.value.trim(), tp = fTopic.value.trim();
       ready.then(function () {
-        return Editor.save({ id: Editor.makeId(catName, c, front), category: catName, course: c, topic: tp, front: front, back: back });
+        var card = { id: Editor.makeId(catName, c, front), category: catName, course: c, topic: tp, front: front, back: back };
+        return Editor.uploadImages(card).then(function () { return Editor.save(card); });
       }).then(function (path) {
         state.prefs.__add = { cat: catName, course: c, topic: tp }; saveJSON(PREFS_KEY, state.prefs);
         toast('Card saved');

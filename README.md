@@ -12,6 +12,8 @@ Math is written in LaTeX and rendered with KaTeX.
 
 Tap **+ Add**, pick the category, type course, topic, front and back (math preview included) and save. The card is committed to this repository, so it reaches every device after GitHub Pages republishes (about a minute; it shows on the device you used straight away).
 
+To attach a picture (for example a handwritten proof), tap **Add image** below the Back box, or paste an image into the text box on a computer. Images are stored in `images/`; tap one on a card to see it full screen.
+
 ## Turn on sync and card saving (once per device)
 
 1. Create a classic token at https://github.com/settings/tokens/new?scopes=gist,public_repo with only **gist** and **public_repo** ticked. Pick a long expiration or none.

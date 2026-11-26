@@ -102,6 +102,17 @@ Rules:
   `cases`, `pmatrix`. Not supported: `\label`, `\eqref`, packages, custom `\newcommand` across cards.
 - For multi-line derivations use `$$\begin{aligned} a &= b \\ &= c \end{aligned}$$`.
 
+## Images
+
+- Images live in the `images/` folder at the repository root and are referenced from the front or
+  back with Markdown: `![Proof of OLS unbiasedness](images/ols-unbiasedness-proof.jpg)`.
+  The path is relative to the site root, so always start it with `images/`.
+- In the app, the "Add image" button (or pasting an image into the text box) uploads the picture,
+  shrinks it to at most 1800px, and inserts this line for you.
+- Claude Chat can't upload files. If an image is needed, write the card text with the image line and
+  tell the user which file to add to `images/` (or let them use the app).
+- Tapping an image on a card opens it full screen.
+
 ## Writing good cards
 
 - **One idea per card.** If the back needs a heading, split it into two cards.
